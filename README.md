@@ -25,7 +25,7 @@ python remove_default_vpc.py
 
 You are logged in as arn:aws:sts::<ACCOUNT_ID>:assumed-role/<ROLE_NAME>/<SESSION_NAME>
 
-If the above user/account are correct, enter 'yes' to continue and attempt to delete resources: yes
+If the above user/account are correct, enter 'yes' to attempt to delete resources: yes
 ```
 
 **Output:**
