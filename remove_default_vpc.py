@@ -10,6 +10,7 @@ Boto3 Version: 1.7.50
 import boto3
 from botocore.exceptions import ClientError
 import logging
+import re
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--dryrun", help="do not modify, show what would be done", action='store_true')
@@ -137,7 +138,7 @@ def check_for_non_default_acls(ec2, args, vpc_id):
   return False
 
 
-def check_for_non_default_sgs(ec2, args, vpc_id):
+def delete_launch_wizard_sgs(ec2, args, vpc_id):
   """
   Delete any security groups
   """
@@ -149,11 +150,22 @@ def check_for_non_default_sgs(ec2, args, vpc_id):
 
   if sgps:
     for sgp in sgps:
-      if not (sgp['GroupName'] == 'default'):
-        logging.warning('Found non default security group associated with VPC; this requires manual investigation. ACL id: ' + str(sgp['GroupId']) + ' vpc id: ' + str(vpc_id))
-        return True
+      is_match = re.match('launch-wizard-[0-9]+', sgp['GroupName'])
+      if is_match:
+        if global_args.dryrun:
+          # logging.warning('Dryrun; would have tried to delete launch wizard security group: ' + str(sgp['GroupName']) + ' ' + str(sgp['GroupId']) + ' in VPC: ' + str(vpc_id))
+          logging.warning('Dryrun; would have tried to delete launch wizard security group: {} {} in VPC: {}'.format(str(sgp['GroupName']), str(sgp['GroupId']), str(vpc_id)))
+        else:
+          logging.warning('Deleting launch wizard security group: {} {} in VPC: {}'.format(str(sgp['GroupName']), str(sgp['GroupId']), str(vpc_id)))
+          try:
+            result = ec2.delete_security_group(GroupId=sgp['GroupId'])
+          except ClientError as e:
+            logging.error(e.response['Error']['Message'])
 
-  return False
+      else:
+        logging.info('Did not find any launch wizard security groups in VPC {}'.format(str(vpc_id)))
+
+  return
 
 
 def delete_vpc(ec2, vpc_id, region):
@@ -201,7 +213,7 @@ def main(profile):
   2.) Delete subnets
   3.) Check for non-default route tables (default cannot be deleted, others require manual investigation)
   4.) Check for non-default network access lists
-  5.) Check for non-default security groups
+  5.) Check for non-default security groups, delete any launch-wizard groups
   6.) Delete the VPC 
   """
 
@@ -215,6 +227,16 @@ def main(profile):
     ec2 = session.client('ec2', region_name='us-east-1')
   except:
     logging.error("UNABLE TO CONNECT!")
+
+  print('\n' + 'You are logged in as ' + response['Arn'] + '\n')
+  if global_args.dryrun:
+    user_response = input('If the above user/account are correct, enter \'yes\' to continue (dryrun flag used, will not make changes): ')
+  else:
+    user_response = input('If the above user/account are correct, enter \'yes\' to attempt to delete resources: ')
+
+  if user_response != 'yes':
+    logging.fatal('User response was not \'yes\'. Exiting without changing anything.')
+    return
 
   regions = get_regions(ec2)
   logging.info('Fetched Regions: '+ str(regions))
@@ -262,9 +284,9 @@ def main(profile):
     delete_subnets(ec2, args, vpc_id)
     non_default_rtb_exists = check_for_non_default_rtbs(ec2, args, vpc_id)
     non_default_acl_exists = check_for_non_default_acls(ec2, args, vpc_id)
-    non_default_sg_exists = check_for_non_default_sgs(ec2, args, vpc_id)
+    delete_launch_wizard_sgs(ec2, args, vpc_id)
 
-    if not (non_default_rtb_exists or non_default_acl_exists or non_default_sg_exists):
+    if not (non_default_rtb_exists or non_default_acl_exists):
       delete_vpc(ec2, vpc_id, region)
     else:
       logging.warning('Not deleting vpc because non-default resources are associated: ' + str(vpc_id))
@@ -274,5 +296,5 @@ def main(profile):
 
 if __name__ == "__main__":
   logging.info('Running default loop')
-  main(profile = 'orgmaster002-alignbi')
+  main(profile = '<YOUR_PROFILE>')
 
