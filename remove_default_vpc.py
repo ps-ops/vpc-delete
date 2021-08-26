@@ -46,7 +46,7 @@ def delete_igw(ec2, vpc_id):
   try:
     igw = ec2.describe_internet_gateways(**args)['InternetGateways']
   except ClientError as e:
-    print(e.response['Error']['Message'])
+    logging.error(e.response['Error']['Message'])
 
   if igw:
     igw_id = igw[0]['InternetGatewayId']
@@ -71,7 +71,7 @@ def delete_igw(ec2, vpc_id):
   return
 
 
-def delete_subs(ec2, args, vpc_id):
+def delete_subnets(ec2, args, vpc_id):
   """
   Delete the subnets
   """
@@ -79,7 +79,7 @@ def delete_subs(ec2, args, vpc_id):
   try:
     subs = ec2.describe_subnets(**args)['Subnets']
   except ClientError as e:
-    print(e.response['Error']['Message'])
+    logging.error(e.response['Error']['Message'])
   
   if subs:
     for sub in subs:
@@ -94,100 +94,82 @@ def delete_subs(ec2, args, vpc_id):
           logging.error(e.response['Error']['Message'])
   else:
     logging.warning('No Subnets found in '+ str(vpc_id))
+
   return
 
 
-# def delete_rtbs(ec2, args, vpc_id):
-#   """
-#   Delete the route tables
-#   """
+def check_for_non_default_rtbs(ec2, args, vpc_id):
+  """
+  Delete the route tables
+  """
 
-#   try:
-#     rtbs = ec2.describe_route_tables(**args)['RouteTables']
-#   except ClientError as e:
-#     print(e.response['Error']['Message'])
+  try:
+    rtbs = ec2.describe_route_tables(**args)['RouteTables']
+  except ClientError as e:
+    logging.error(e.response['Error']['Message'])
 
-#   if rtbs:
-#     for rtb in rtbs:
-#       main = 'false'
-#       for assoc in rtb['Associations']:
-#         main = assoc['Main']
-#       if main == True:
-#         continue
-#       rtb_id = rtb['RouteTableId']
-        
-#       try:
-#         result = ec2.delete_route_table(RouteTableId=rtb_id)
-#       except ClientError as e:
-#         print(e.response['Error']['Message'])
-
-#   return
+  if rtbs:
+    for rtb in rtbs:
+      for assoc in rtb['Associations']:
+        if not assoc['Main']:
+          logging.warning('Found non default route tables associated with VPC; this requires manual investigation. rtb id: ' + str(rtb['RouteTableId']) + 'vpc id: ' + str(vpc_id))
+          return True
+ 
+  return False
 
 
-# def delete_acls(ec2, args, vpc_id):
-#   """
-#   Delete the network access lists (NACLs)
-#   """
+def check_for_non_default_acls(ec2, args, vpc_id):
+  """
+  Delete the network access lists (NACLs)
+  """
 
-#   try:
-#     acls = ec2.describe_network_acls(**args)['NetworkAcls']
-#   except ClientError as e:
-#     print(e.response['Error']['Message'])
+  try:
+    acls = ec2.describe_network_acls(**args)['NetworkAcls']
+  except ClientError as e:
+    logging.error(e.response['Error']['Message'])
 
-#   if acls:
-#     for acl in acls:
-#       default = acl['IsDefault']
-#       if default == True:
-#         continue
-#       acl_id = acl['NetworkAclId']
+  if acls:
+    for acl in acls:
+      if not acl['IsDefault']: 
+        logging.warning('Found non default network ACL associated with VPC; this requires manual investigation. ACL id: ' + str(acl['NetworkAclId']) + 'vpc id: ' + str(vpc_id))
+        return True
 
-#       try:
-#         result = ec2.delete_network_acl(NetworkAclId=acl_id)
-#       except ClientError as e:
-#         print(e.response['Error']['Message'])
-
-#   return
+  return False
 
 
-# def delete_sgps(ec2, args, vpc_id):
-#   """
-#   Delete any security groups
-#   """
+def check_for_non_default_sgs(ec2, args, vpc_id):
+  """
+  Delete any security groups
+  """
 
-#   try:
-#     sgps = ec2.describe_security_groups(**args)['SecurityGroups']
-#   except ClientError as e:
-#     print(e.response['Error']['Message'])
+  try:
+    sgps = ec2.describe_security_groups(**args)['SecurityGroups']
+  except ClientError as e:
+    logging.error(e.response['Error']['Message'])
 
-#   if sgps:
-#     for sgp in sgps:
-#       default = sgp['GroupName']
-#       if default == 'default':
-#         continue
-#       sg_id = sgp['GroupId']
+  if sgps:
+    for sgp in sgps:
+      if not (sgp['GroupName'] == 'default'):
+        logging.warning('Found non default security group associated with VPC; this requires manual investigation. ACL id: ' + str(sgp['GroupId']) + ' vpc id: ' + str(vpc_id))
+        return True
 
-#       try:
-#         result = ec2.delete_security_group(GroupId=sg_id)
-#       except ClientError as e:
-#         print(e.response['Error']['Message'])
-
-#   return
+  return False
 
 
-# def delete_vpc(ec2, vpc_id, region):
-#   """
-#   Delete the VPC
-#   """
+def delete_vpc(ec2, vpc_id, region):
+  """
+  Delete the VPC
+  """
+  if global_args.dryrun:
+    logging.warning('Dryrun mode. Would have deleted VPC: ' + str(vpc_id)+' in region ' + str(region))
+  else:
+    try:
+      logging.warning('Deleting VPC: ' + str(vpc_id) + ' in region ' + str(region))
+      result = ec2.delete_vpc(VpcId=vpc_id)
+    except ClientError as e:
+      logging.error(e.response['Error']['Message'])
 
-#   try:
-#     result = ec2.delete_vpc(VpcId=vpc_id)
-#   except ClientError as e:
-#     print(e.response['Error']['Message'])
-
-#   else:
-#     print('VPC {} has been deleted from the {} region.'.format(vpc_id, region))
-
-#   return
+  return
 
 
 def get_regions(ec2):
@@ -200,7 +182,7 @@ def get_regions(ec2):
   try:
     aws_regions = ec2.describe_regions()['Regions']
   except ClientError as e:
-    print(e.response['Error']['Message'])
+    logging.error(e.response['Error']['Message'])
 
   else:
     for region in aws_regions:
@@ -217,9 +199,9 @@ def main(profile):
 
   1.) Delete the internet gateway
   2.) Delete subnets
-  3.) Delete route tables
-  4.) Delete network access lists
-  5.) Delete security groups
+  3.) Check for non-default route tables (default cannot be deleted, others require manual investigation)
+  4.) Check for non-default network access lists
+  5.) Check for non-default security groups
   6.) Delete the VPC 
   """
 
@@ -229,9 +211,7 @@ def main(profile):
     session = boto3.Session(profile_name=profile)
     sts = session.client('sts', region_name='us-east-1')
     response = sts.get_caller_identity()
-    logging.info('Logged in as: ')
-    logging.info(response)
-
+    logging.info('Logged in as: ' + response['Arn'])
     ec2 = session.client('ec2', region_name='us-east-1')
   except:
     logging.error("UNABLE TO CONNECT!")
@@ -275,15 +255,19 @@ def main(profile):
       return
 
     if eni:
-      print('VPC {} has existing resources in the {} region.'.format(vpc_id, region))
+      logging.warning('VPC {} has existing network interfaces in the {} region and will be skipped.'.format(vpc_id, region))
       continue
 
-    result = delete_igw(ec2, vpc_id)
-    result = delete_subs(ec2, args, vpc_id)
-    # result = delete_rtbs(ec2, args, vpc_id)
-    # result = delete_acls(ec2, args, vpc_id)
-    # result = delete_sgps(ec2, args, vpc_id)
-    # result = delete_vpc(ec2, vpc_id, region)
+    delete_igw(ec2, vpc_id)
+    delete_subnets(ec2, args, vpc_id)
+    non_default_rtb_exists = check_for_non_default_rtbs(ec2, args, vpc_id)
+    non_default_acl_exists = check_for_non_default_acls(ec2, args, vpc_id)
+    non_default_sg_exists = check_for_non_default_sgs(ec2, args, vpc_id)
+
+    if not (non_default_rtb_exists or non_default_acl_exists or non_default_sg_exists):
+      delete_vpc(ec2, vpc_id, region)
+    else:
+      logging.warning('Not deleting vpc because non-default resources are associated: ' + str(vpc_id))
 
   return
 
