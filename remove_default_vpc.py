@@ -101,7 +101,7 @@ def delete_subnets(ec2, args, vpc_id):
 
 def check_for_non_default_rtbs(ec2, args, vpc_id):
   """
-  Delete the route tables
+  Check for non-default route tables
   """
 
   try:
@@ -121,7 +121,7 @@ def check_for_non_default_rtbs(ec2, args, vpc_id):
 
 def check_for_non_default_acls(ec2, args, vpc_id):
   """
-  Delete the network access lists (NACLs)
+  Check for non-default network access lists (NACLs)
   """
 
   try:
@@ -140,7 +140,7 @@ def check_for_non_default_acls(ec2, args, vpc_id):
 
 def delete_launch_wizard_sgs(ec2, args, vpc_id):
   """
-  Delete any security groups
+  Delete any launch-wizard security groups
   """
 
   try:
