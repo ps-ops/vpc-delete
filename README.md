@@ -10,15 +10,10 @@ This Python script attempts to delete the AWS default VPC in each region.
    * Botocore version: 1.21.29
 * Valid AWS API keys/profile
 
-**Setup:**
-
-Update with your AWS profile / credentials.
-
-```
-main(profile = '<YOUR_PROFILE>')
-```
-
 **Usage:**
+
+If using aws_okta_keyman, your default AWS CLI profile will be overwritten with the current session. If using an authentication method other than aws_okta_keyman, you may need to pass in a specific profile using the -p flag. The script will use your default profile if the -p flag is omitted.
+
 
 ```
 python remove_default_vpc.py
@@ -26,6 +21,7 @@ python remove_default_vpc.py
 You are logged in as arn:aws:sts::<ACCOUNT_ID>:assumed-role/<ROLE_NAME>/<SESSION_NAME>
 
 If the above user/account are correct, enter 'yes' to attempt to delete resources: yes
+
 ```
 
 **Output:**

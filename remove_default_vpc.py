@@ -24,6 +24,11 @@ parser.add_argument(
     '-v', '--verbose',
     help="Be verbose",
     action="store_const", dest="loglevel", const=logging.INFO,
+    default="default"
+)
+parser.add_argument(
+  '-p', '--profile',
+  help="The AWS profile name as it appears in your .aws/credentials file"
 )
 
 global_args = parser.parse_args()
@@ -226,7 +231,7 @@ def main(profile):
     logging.info('Logged in as: ' + response['Arn'])
     ec2 = session.client('ec2', region_name='us-east-1')
   except:
-    logging.error("UNABLE TO CONNECT!")
+    logging.error("UNABLE TO CONNECT! Make sure you used the correct AWS CLI profile. Profile input: " + global_args.profile)
 
   print('\n' + 'You are logged in as ' + response['Arn'] + '\n')
   if global_args.dryrun:
@@ -256,7 +261,7 @@ def main(profile):
     vpc_id = attribs[0]['AttributeValues'][0]['AttributeValue']
     logging.info('FOUND A VPC: '+ str(vpc_id))
     if vpc_id == 'none':
-      logging.info('VPC (default) was not found in the {} region.'.format(region))
+      logging.warn('VPC (default) was not found in the {} region.'.format(region))
       continue
 
     # Are there any existing resources?  Since most resources attach an ENI, let's check..
@@ -296,5 +301,4 @@ def main(profile):
 
 if __name__ == "__main__":
   logging.info('Running default loop')
-  main(profile = '<YOUR_PROFILE>')
-
+  main(profile = global_args.profile)
