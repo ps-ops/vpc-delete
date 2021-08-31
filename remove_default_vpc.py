@@ -24,11 +24,11 @@ parser.add_argument(
     '-v', '--verbose',
     help="Be verbose",
     action="store_const", dest="loglevel", const=logging.INFO,
-    default="default"
 )
 parser.add_argument(
   '-p', '--profile',
-  help="The AWS profile name as it appears in your .aws/credentials file"
+  help="The AWS profile name as it appears in your .aws/credentials file",
+  default="default"
 )
 
 global_args = parser.parse_args()
