@@ -261,7 +261,7 @@ def main(profile):
     vpc_id = attribs[0]['AttributeValues'][0]['AttributeValue']
     logging.info('FOUND A VPC: '+ str(vpc_id))
     if vpc_id == 'none':
-      logging.warn('VPC (default) was not found in the {} region.'.format(region))
+      logging.warning('VPC (default) was not found in the {} region.'.format(region))
       continue
 
     # Are there any existing resources?  Since most resources attach an ENI, let's check..
