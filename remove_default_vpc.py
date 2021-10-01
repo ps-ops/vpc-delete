@@ -245,8 +245,8 @@ def main(profile):
       attribs = ec2.describe_account_attributes(AttributeNames=[ 'default-vpc' ])['AccountAttributes']
       logging.debug('Found account attributes:'+ str(attribs))
     except ClientError as e:
-      logging.error(e.response['Error']['Message'])
-      return
+      logging.error("Failed to describe account attributes in region: " + str(region) + "; Error: " + e.response['Error']['Message'])
+      continue
 
 
     vpc_id = attribs[0]['AttributeValues'][0]['AttributeValue']
