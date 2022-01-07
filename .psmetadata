@@ -1,6 +1,7 @@
 {
-   "version":1,
+   "version":2,
    "team":"exp_cloud_engineering",
+   "team-type":"okta",
    "slack-channel":"#ops",
    "in-use":true
 }
