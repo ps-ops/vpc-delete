@@ -1,0 +1,11 @@
+# CODEOWNERS for Pluralsight
+# Last updated: April 2025
+
+.github/** @ps-ops/operations
+**/CODEOWNERS @ps-ops/operations
+**codedeploy** @ps-ops/operations
+**/Dockerfile @ps-ops/operations
+**/*.tf @ps-ops/operations
+**/*values*.yaml @ps-ops/operations
+**/*values*.yml @ps-ops/operations
+**/cdk/** @ps-ops/operations
